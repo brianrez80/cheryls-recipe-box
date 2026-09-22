@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const source = fs.readFileSync(path.join(__dirname, 'nexus.js'), 'utf8');
+const nexusSource = fs.readFileSync(path.join(__dirname, 'nexus.js'), 'utf8');
+const imagesSource = fs.readFileSync(path.join(__dirname, 'images.js'), 'utf8');
 const context = {
   console,
   window: {
@@ -30,9 +31,9 @@ const context = {
   showReviewComparison: () => {}
 };
 
-vm.runInNewContext(`${source}\nthis.__nexusTests = { getNexusDuplicateKey, isNexusDuplicate, clearIncompleteNexusImports, getNextNexusPendingEntry, removeNexusEntry, markNexusEntryFailed };`, context);
+vm.runInNewContext(`${nexusSource}\n${imagesSource}\nthis.__nexusTests = { getNexusDuplicateKey, isNexusDuplicate, clearIncompleteNexusImports, getNextNexusPendingEntry, removeNexusEntry, markNexusEntryFailed, buildNexusBatchEntry, renderImageHtml };`, context);
 
-const { getNexusDuplicateKey, isNexusDuplicate, clearIncompleteNexusImports, getNextNexusPendingEntry, removeNexusEntry, markNexusEntryFailed } = context.__nexusTests;
+const { getNexusDuplicateKey, isNexusDuplicate, clearIncompleteNexusImports, getNextNexusPendingEntry, removeNexusEntry, markNexusEntryFailed, buildNexusBatchEntry, renderImageHtml } = context.__nexusTests;
 
 const firstFile = { name: 'one.jpg', size: 100, lastModified: 10 };
 const duplicateFile = { name: 'one.jpg', size: 100, lastModified: 10 };
@@ -57,5 +58,19 @@ assert.strictEqual(markNexusEntryFailed(failed, 'bad image').error, 'bad image')
 assert.strictEqual(getNexusDuplicateKey(firstFile), getNexusDuplicateKey(duplicateFile));
 assert.strictEqual(isNexusDuplicate(duplicateFile, [{ key: getNexusDuplicateKey(firstFile) }]), true);
 assert.strictEqual(isNexusDuplicate(secondFile, [{ key: getNexusDuplicateKey(firstFile) }]), false);
+
+const batchFiles = [
+  { name: 'one.jpg', size: 100, lastModified: 10 },
+  { name: 'two.png', size: 200, lastModified: 11 },
+  { name: 'three.jpeg', size: 300, lastModified: 12 }
+];
+const batchEntry = buildNexusBatchEntry(batchFiles, { id: 'batch-1' });
+assert.strictEqual(batchEntry.files.length, 3);
+assert.strictEqual(batchEntry.files[0].name, 'one.jpg');
+assert.strictEqual(batchEntry.files[2].name, 'three.jpeg');
+
+const reviewImagesMarkup = renderImageHtml(['https://img1', 'https://img2'], 'Test Recipe');
+assert.match(reviewImagesMarkup, /https:\/\/img1/);
+assert.match(reviewImagesMarkup, /https:\/\/img2/);
 
 console.log('Nexus queue tests passed.');

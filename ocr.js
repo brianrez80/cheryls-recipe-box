@@ -55,20 +55,99 @@ function isSocialPromptLine(line) {
   return OCR_SOCIAL_PROMPT_PATTERNS.some(pattern => pattern.test(cleaned));
 }
 
+function countAlphabeticWords(text) {
+  return (cleanOCRLine(text).match(/\b[a-z]{2,}\b/gi) || []).length;
+}
+
+function scoreOCRLine(line) {
+  const cleaned = cleanOCRLine(line);
+  if (!cleaned) return 0;
+
+  const compact = cleaned.replace(/\s/g, '');
+  const alphaCharacters = (compact.match(/[a-z]/gi) || []).length;
+  const digitCharacters = (compact.match(/\d/g) || []).length;
+  const symbolCharacters = compact.length - alphaCharacters - digitCharacters;
+  const alphaWordCount = countAlphabeticWords(cleaned);
+  const hasRecipeKeyword = /\b(?:ingredients?|directions?|instructions?|cups?|teaspoons?|tablespoons?|cook|add|stir|bake|serve|mix|heat|combine|preheat|pour|fold|whisk|boil|chicken|beef|pasta|soup|salad)\b/i.test(cleaned);
+  const hasReadableWords = alphaWordCount >= 1;
+  const symbolRatio = compact.length ? symbolCharacters / compact.length : 0;
+
+  let score = 0;
+  if (hasReadableWords) score += 0.45 + Math.min(alphaWordCount * 0.1, 0.35);
+  if (hasRecipeKeyword) score += 0.25;
+  if (alphaCharacters >= 6) score += 0.1;
+  if (cleaned.length <= 2) score -= 0.4;
+  score -= Math.min(0.7, symbolRatio * 1.2);
+
+  return Math.max(0, Math.min(1, score));
+}
+
+function scoreOCRText(text) {
+  const lines = normalizeOCRText(text).split('\n').map(cleanOCRLine).filter(Boolean);
+  if (!lines.length) return 0;
+
+  const lineScores = lines.map(scoreOCRLine);
+  const readableLineCount = lineScores.filter(score => score >= 0.35).length;
+  const alphaWordCount = lines.reduce((sum, line) => sum + countAlphabeticWords(line), 0);
+  const totalWordCount = lines.reduce((sum, line) => sum + cleanOCRLine(line).split(/\s+/).filter(Boolean).length, 0);
+  const wordDensity = totalWordCount ? alphaWordCount / totalWordCount : 0;
+  const averageSymbolRatio = lines.reduce((sum, line) => {
+    const compact = cleanOCRLine(line).replace(/\s/g, '');
+    const alphaCharacters = (compact.match(/[a-z]/gi) || []).length;
+    const digitCharacters = (compact.match(/\d/g) || []).length;
+    const symbolCharacters = compact.length - alphaCharacters - digitCharacters;
+    return sum + (compact.length ? symbolCharacters / compact.length : 0);
+  }, 0) / lines.length;
+
+  const qualityScore = (Math.min(readableLineCount / 3, 1) * 0.35)
+    + (Math.min(wordDensity, 1) * 0.35)
+    + (Math.max(0, 1 - averageSymbolRatio) * 0.3);
+
+  return Math.max(0, Math.min(1, qualityScore));
+}
+
 function isLikelyOCRNoise(line) {
   const cleaned = cleanOCRLine(line);
   if (!cleaned || isSocialPromptLine(cleaned)) return true;
 
   const compact = cleaned.replace(/\s/g, '');
   const readableCharacters = compact.match(/[\p{L}\p{N}]/gu) || [];
+  const lineScore = scoreOCRLine(cleaned);
 
+  if (lineScore >= 0.35) return false;
   if (readableCharacters.length < 2) return true;
   if (compact.length >= 6 && readableCharacters.length / compact.length < 0.35) return true;
 
   const letterRuns = cleaned.toLowerCase().match(/[a-z]{7,}/g) || [];
   if (letterRuns.some(run => !/[aeiouy]/.test(run))) return true;
 
-  return false;
+  return true;
+}
+
+function looksLikeReadableTitle(value) {
+  const title = cleanOCRLine(value || '');
+  if (!title) return false;
+
+  const compact = title.replace(/\s/g, '');
+  if (!compact || compact.length < 3) return false;
+  const readableCharacters = (compact.match(/[a-z0-9]/gi) || []).length;
+  if (readableCharacters < 3) return false;
+
+  const symbolRatio = 1 - (readableCharacters / Math.max(1, compact.length));
+  const words = title.split(/\s+/).filter(Boolean);
+  const alphaWords = words.filter(word => /^[a-z]{2,}$/i.test(word));
+  const looksGeneric = /\b(?:symbols?|only|title|recipe|photo|image|untitled)\b/i.test(title) && words.length <= 2;
+  const hasKnownSingleWordPattern = /^[a-z]{4,}$/i.test(title) && /^(?:pancakes?|pasta|salad|soup|stew|curry|salsa|tacos?|burritos?|casserole|pilaf|ramen|bread|cookies?|brownies?|muffins?|waffles?|sandwiches?|omelet|omelette|frittata|pizza|lasagna|risotto|tart|pie|cake|scones?)$/i.test(title);
+
+  return !looksGeneric && symbolRatio < 0.5 && (alphaWords.length >= 2 || hasKnownSingleWordPattern);
+}
+
+function hasMeaningfulRecipeContent(page) {
+  return Boolean(
+    String(page?.ingredients || '').trim() ||
+    String(page?.instructions || '').trim() ||
+    looksLikeReadableTitle(page?.title)
+  );
 }
 
 function extractLabeledValue(text, labels) {
@@ -139,33 +218,36 @@ function formatInstructionLines(lines) {
 
 function findRecipeTitle(lines, text) {
   const explicitTitle = extractLabeledValue(text, ['recipe title', 'title']);
-  if (explicitTitle) return explicitTitle;
+  if (explicitTitle && looksLikeReadableTitle(explicitTitle)) return cleanOCRLine(explicitTitle);
 
   const firstSectionIndex = [findSectionIndex(lines, 'ingredients'), findSectionIndex(lines, 'instructions')]
     .filter(index => index >= 0)
     .sort((a, b) => a - b)[0] ?? lines.length;
 
   const candidates = lines.slice(0, firstSectionIndex).filter(line => {
-    const readableCharacterCount = (line.match(/[a-z0-9]/gi) || []).length;
-    if (!line || readableCharacterCount < 2 || OCR_METADATA_LABELS.some(label =>
-      new RegExp(`^${label.replace(/\s+/g, '\\s+')}\\s*[:\\-]`, 'i').test(line)
+    const cleaned = cleanOCRLine(line);
+    const readableCharacterCount = (cleaned.match(/[a-z0-9]/gi) || []).length;
+    if (!cleaned || readableCharacterCount < 2 || OCR_METADATA_LABELS.some(label =>
+      new RegExp(`^${label.replace(/\s+/g, '\\s+')}\\s*[:\-]`, 'i').test(cleaned)
     )) {
       return false;
     }
 
-    return !/^(?:test kitchen recipe|recipe card|family recipe|recipe)$/i.test(line);
+    return !/^(?:test kitchen recipe|recipe card|family recipe|recipe)$/i.test(cleaned);
   });
 
   const titleCandidate = candidates.find((line, index) => {
+    const cleaned = cleanOCRLine(line);
     const hasCandidateAfterIt = index < candidates.length - 1;
     const looksLikeRecipeKicker = (
-      /\brecipe\b/i.test(line) &&
-      /\b(?:test|verification|kitchen|family|cookbook|collection|card)\b/i.test(line)
+      /\brecipe\b/i.test(cleaned) &&
+      /\b(?:test|verification|kitchen|family|cookbook|collection|card)\b/i.test(cleaned)
     );
     return !(hasCandidateAfterIt && looksLikeRecipeKicker);
   });
 
-  return cleanOCRLine(titleCandidate || candidates[0] || 'Untitled Recipe');
+  const fallbackTitle = cleanOCRLine(titleCandidate || candidates[0] || '');
+  return looksLikeReadableTitle(fallbackTitle) ? fallbackTitle : '';
 }
 
 function normalizeMainCategory(explicitValue, text) {
@@ -227,17 +309,21 @@ function parseRecipeText(rawText, confidence = 0) {
 
   if (ingredientLines.length === 0) {
     const ingredientPattern = /^(?:\d+(?:[ /.]\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞])\s*(?:cups?|tablespoons?|tbsp|teaspoons?|tsp|ounces?|oz|pounds?|lb|grams?|g|kilograms?|kg|cloves?|cans?|packages?|large|medium|small)\b/i;
-    ingredientLines = lines.filter(line => ingredientPattern.test(line));
+    ingredientLines = lines.filter(line => ingredientPattern.test(line) && scoreOCRLine(line) >= 0.35);
   }
 
   if (instructionLines.length === 0) {
     const instructionPattern = /^(?:\d{1,2}[.)]\s*)?(?:add|bake|beat|blend|boil|combine|cook|fold|heat|mix|place|pour|preheat|serve|stir|whisk)\b/i;
-    instructionLines = lines.filter(line => instructionPattern.test(line));
+    instructionLines = lines.filter(line => instructionPattern.test(line) && scoreOCRLine(line) >= 0.35);
   }
+
+  ingredientLines = ingredientLines.filter(line => scoreOCRLine(line) >= 0.35);
+  instructionLines = instructionLines.filter(line => scoreOCRLine(line) >= 0.35);
 
   const categoryValue = extractLabeledValue(text, ['main category', 'category']);
   const ethnicityValue = extractLabeledValue(text, ['cuisine', 'ethnicity']);
   const cookTime = extractLabeledValue(text, ['cook time', 'cooking time', 'total time']);
+  const qualityScore = scoreOCRText(text);
 
   return {
     title: findRecipeTitle(lines, text),
@@ -249,15 +335,18 @@ function parseRecipeText(rawText, confidence = 0) {
       ethnicity: normalizeEthnicity(ethnicityValue, text)
     },
     confidence: Number.isFinite(confidence) ? Math.round(confidence) : 0,
+    qualityScore,
     rawText: text
   };
 }
 
 function mergeParsedRecipePages(pages) {
+  const candidatePages = (pages || []).filter(page => page && (String(page.ingredients || '').trim() || String(page.instructions || '').trim() || looksLikeReadableTitle(page.title)));
+  const contentPages = candidatePages.filter(page => Boolean(String(page.ingredients || '').trim() || String(page.instructions || '').trim()));
   const uniqueIngredients = [];
   const instructionSteps = [];
 
-  pages.forEach(page => {
+  contentPages.forEach(page => {
     String(page.ingredients || '').split('\n').filter(Boolean).forEach(ingredient => {
       if (!uniqueIngredients.includes(ingredient)) uniqueIngredients.push(ingredient);
     });
@@ -268,34 +357,45 @@ function mergeParsedRecipePages(pages) {
     });
   });
 
-  const firstMeaningfulTitle = pages.find(
-    page => page.title && page.title !== 'Untitled Recipe'
-  )?.title || 'Untitled Recipe';
-  const firstKnownCategory = pages.find(
-    page => page.categories?.main && page.categories.main !== 'Other'
-  )?.categories?.main || 'Other';
-  const firstKnownEthnicity = pages.find(
-    page => page.categories?.ethnicity && page.categories.ethnicity !== 'Other'
-  )?.categories?.ethnicity || 'Other';
-  const confidenceValues = pages
+  const titleCandidates = candidatePages.filter(page => looksLikeReadableTitle(page.title));
+  const bestTitlePage = titleCandidates.reduce((best, page) => {
+    if (!best) return page;
+    const bestScore = (best.qualityScore || 0);
+    const pageScore = (page.qualityScore || 0);
+    return pageScore > bestScore ? page : best;
+  }, null);
+  const bestCategoryPage = candidatePages.find(page => page.categories?.main && page.categories.main !== 'Other') || null;
+  const bestEthnicityPage = candidatePages.find(page => page.categories?.ethnicity && page.categories.ethnicity !== 'Other') || null;
+  const bestCookTimePage = contentPages.filter(page => page.cookTime).reduce((best, page) => {
+    if (!best) return page;
+    return (page.qualityScore || 0) > (best.qualityScore || 0) ? page : best;
+  }, null);
+  const confidenceValues = candidatePages
     .map(page => page.confidence)
     .filter(Number.isFinite);
+  const ocrWarnings = candidatePages.filter(page => (page.qualityScore || 0) < 0.35).length > 0
+    ? ['One or more OCR pages had low quality and may need manual review.']
+    : [];
 
   return {
-    title: firstMeaningfulTitle,
+    title: bestTitlePage?.title || '',
     ingredients: uniqueIngredients.join('\n'),
     instructions: instructionSteps
       .map((step, index) => `${index + 1}. ${step}`)
       .join('\n'),
-    cookTime: pages.find(page => page.cookTime)?.cookTime || '',
+    cookTime: bestCookTimePage?.cookTime || '',
     categories: {
-      main: firstKnownCategory,
-      ethnicity: firstKnownEthnicity
+      main: bestCategoryPage?.categories?.main || '',
+      ethnicity: bestEthnicityPage?.categories?.ethnicity || ''
     },
     confidence: confidenceValues.length
       ? Math.round(confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length)
       : 0,
-    rawText: pages.map(page => page.rawText).filter(Boolean).join('\n\n')
+    qualityScore: contentPages.length
+      ? Math.round(contentPages.reduce((sum, page) => sum + (page.qualityScore || 0), 0) / contentPages.length * 100) / 100
+      : 0,
+    ocrWarnings,
+    rawText: candidatePages.map(page => page.rawText).filter(Boolean).join('\n\n')
   };
 }
 
@@ -333,8 +433,15 @@ async function performOCR(imageFiles, onProgress) {
       currentImageIndex = index + 1;
       console.log(`Performing OCR on ${files[index].name}`);
       const { data } = await worker.recognize(files[index]);
-      if (data?.text?.trim()) {
-        recognizedPages.push(parseRecipeText(data.text, data.confidence));
+      const pageText = data?.text?.trim() || '';
+      if (!pageText) {
+        continue;
+      }
+
+      try {
+        recognizedPages.push(parseRecipeText(pageText, data.confidence));
+      } catch (error) {
+        console.warn(`Skipping unreadable OCR page ${files[index].name}:`, error.message);
       }
     }
   } finally {
@@ -357,13 +464,10 @@ async function createDraftFromOCR(images, ocrData, contributorName) {
   if (ocrData.instructions) {
     noteSections.push(`Instructions\n${ocrData.instructions}`);
   }
-  if (noteSections.length === 0 && ocrData.rawText) {
-    noteSections.push(ocrData.rawText);
-  }
 
   const recipe = {
     id: generateId(),
-    name: ocrData.title || 'Untitled Recipe',
+    name: ocrData.title || '',
     time: ocrData.cookTime || '',
     mainCategory: ocrData.categories?.main || '',
     ethnicity: ocrData.categories?.ethnicity || '',
@@ -373,7 +477,9 @@ async function createDraftFromOCR(images, ocrData, contributorName) {
     contributorName: contributorName || 'Anonymous',
     reviewedBy: null,
     reviewedAt: null,
-    images: images
+    images: Array.isArray(images) ? images : [images],
+    ocrWarnings: Array.isArray(ocrData.ocrWarnings) ? ocrData.ocrWarnings : [],
+    persisted: false
   };
 
   return recipe;
@@ -382,7 +488,6 @@ async function createDraftFromOCR(images, ocrData, contributorName) {
 // Submit OCR recipe for review
 async function submitOCRRecipe(recipe) {
   try {
-    await saveNewRecipe(recipe);
     console.log('Recipe submitted for review:', recipe.id);
     return recipe.id;
   } catch (error) {

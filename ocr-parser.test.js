@@ -94,6 +94,82 @@ assert.strictEqual(merged.categories.main, 'Soup');
 assert.match(merged.ingredients, /4 cups tomatoes/);
 assert.match(merged.instructions, /^2\. Cook for 20 minutes\./m);
 assert.strictEqual(merged.confidence, 90);
+assert.ok(merged.ingredients.indexOf('4 cups tomatoes') < merged.ingredients.indexOf('1 cup vegetable stock'));
+
+const mixedQualityMerge = mergeParsedRecipePages([
+  parseRecipeText(`
+Ranch Chicken Pasta
+Ingredients
+2 chicken breasts
+1 cup pasta
+Directions
+1. Cook the chicken.
+`, 95),
+  { title: '@@@####', ingredients: '', instructions: '', categories: { main: 'Other', ethnicity: 'Other' }, cookTime: '', confidence: 0, rawText: '@@@####' }
+]);
+
+assert.strictEqual(mixedQualityMerge.title, 'Ranch Chicken Pasta');
+assert.match(mixedQualityMerge.ingredients, /2 chicken breasts/);
+assert.match(mixedQualityMerge.instructions, /Cook the chicken\./);
+
+const lowQualityTitle = parseRecipeText(`
+@@@####
+Symbols only
+`, 5);
+assert.strictEqual(lowQualityTitle.title, '');
+
+const gibberishTitle = parseRecipeText(`
+406 MX @ ° 0 ® 5G. G.
+`, 5);
+assert.strictEqual(gibberishTitle.title, '');
+
+const noisyContent = parseRecipeText(`
+ou ® Fair
+v5 2 ed eB a 5 9 @@ ® [1 O <
+`, 5);
+assert.strictEqual(noisyContent.ingredients, '');
+assert.strictEqual(noisyContent.instructions, '');
+
+const mixedPages = mergeParsedRecipePages([
+  parseRecipeText(`
+Chicken Pasta Bake
+Ingredients
+2 chicken breasts
+1 cup pasta
+Directions
+1. Cook the chicken.
+2. Bake for 20 minutes.
+`, 92),
+  parseRecipeText(`
+406 MX @ ° 0 ® 5G. G.
+`, 5)
+]);
+assert.strictEqual(mixedPages.title, 'Chicken Pasta Bake');
+assert.match(mixedPages.ingredients, /2 chicken breasts/);
+assert.match(mixedPages.instructions, /Bake for 20 minutes\./);
+
+const blankTitleRecipe = createDraftFromOCR(['image.jpg'], { title: '', ingredients: '2 chicken breasts', instructions: 'Cook the chicken.', categories: { main: '', ethnicity: '' }, cookTime: '', rawText: '', ocrWarnings: ['One or more OCR pages had low quality.'] }, 'Test Cook');
+blankTitleRecipe.then(recipe => {
+  assert.strictEqual(recipe.name, '');
+  assert.strictEqual(recipe.ocrWarnings.length, 1);
+});
+
+const reviewFormPayload = createDraftFromOCR(['image.jpg'], {
+  title: 'Chicken Pasta Bake',
+  ingredients: '2 chicken breasts\n1 cup pasta',
+  instructions: '1. Cook the chicken.\n2. Bake for 20 minutes.',
+  cookTime: '20 minutes',
+  categories: { main: 'Chicken', ethnicity: 'American' },
+  rawText: '',
+  ocrWarnings: ['One or more OCR pages had low quality and may need manual review.']
+}, 'Test Cook');
+reviewFormPayload.then(recipe => {
+  assert.strictEqual(recipe.name, 'Chicken Pasta Bake');
+  assert.strictEqual(recipe.time, '20 minutes');
+  assert.match(recipe.notes, /Ingredients\n2 chicken breasts/);
+  assert.match(recipe.notes, /Instructions\n1\. Cook the chicken\./);
+  assert.strictEqual(recipe.ocrWarnings.length, 1);
+});
 
 const noisySocialPost = parseRecipeText(`
 Garlic Butter Salmon and Shrimp

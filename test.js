@@ -143,6 +143,12 @@ console.log('-' .repeat(50));
 const configPath = path.join(__dirname, 'config.js');
 try {
   const configContent = fs.readFileSync(configPath, 'utf8');
+
+  if (configContent.includes('sortFamilyMembers') && configContent.includes('Cheryl')) {
+    pass('Config: family ordering helper available');
+  } else {
+    fail('Missing family ordering helper for Cheryl-first sorting');
+  }
   
   const configChecks = [
     { pattern: 'SUPABASE_CONFIG', name: 'Supabase config object' },

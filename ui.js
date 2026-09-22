@@ -168,7 +168,16 @@ function showReviewComparison(recipe) {
   if (!ui.reviewComparisonPanel) return;
 
   const originalImages = getRecipeImages(recipe);
-  const imageHtml = renderImageHtml(originalImages, recipe.name);
+  const imageHtml = (originalImages || []).map((imageUrl, index) => {
+    return `<div class="review-image-card">
+      <img src="${imageUrl}" alt="${escapeHtml(recipe.name || 'Recipe image')} ${index + 1}" loading="lazy" onerror="this.style.display='none'">
+      <div class="review-image-actions">
+        <button type="button" class="btn secondary" data-review-image-move-up data-review-recipe-id="${recipe.id}" data-review-image-index="${index}">↑</button>
+        <button type="button" class="btn secondary" data-review-image-move-down data-review-recipe-id="${recipe.id}" data-review-image-index="${index}">↓</button>
+        <button type="button" class="btn danger" data-review-image-remove data-review-recipe-id="${recipe.id}" data-review-image-index="${index}">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
 
   const panel = ui.reviewComparisonPanel;
   const comparison = panel.querySelector('[data-comparison-view]');
@@ -182,6 +191,7 @@ function showReviewComparison(recipe) {
     
     <div class="comparison-images">
       <h4>Original Images</h4>
+      ${Array.isArray(recipe.ocrWarnings) && recipe.ocrWarnings.length > 0 ? `<p class="review-hint">${escapeHtml(recipe.ocrWarnings[0])}</p>` : ''}
       <div class="image-grid">
         ${imageHtml}
       </div>
@@ -190,7 +200,8 @@ function showReviewComparison(recipe) {
     <form class="comparison-form" data-recipe-id="${recipe.id}">
       <div class="form-section">
         <label for="review-name">Recipe Name</label>
-        <input type="text" id="review-name" name="name" value="${escapeHtml(recipe.name || '')}" required>
+        <input type="text" id="review-name" name="name" value="${escapeHtml(recipe.name || '')}" placeholder="Please enter the recipe name.">
+        ${recipe.name ? '' : '<p class="review-hint">Please enter the recipe name.</p>'}
       </div>
 
       <div class="form-row">

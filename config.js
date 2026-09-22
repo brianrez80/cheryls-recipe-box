@@ -25,6 +25,31 @@ const ETHNICITIES = [
   'Mediterranean', 'Other'
 ];
 
+// Keep Cheryl at the top of any family member list while preserving the normal order of everyone else.
+const FAMILY_MEMBERS = ['Cheryl', 'Tiffany'];
+
+function sortFamilyMembers(familyMembers = FAMILY_MEMBERS) {
+  if (!Array.isArray(familyMembers)) return [];
+
+  const normalizedMembers = familyMembers
+    .filter(member => member !== null && member !== undefined)
+    .map(member => String(member).trim())
+    .filter(Boolean);
+
+  const cherylEntry = normalizedMembers.find(name => /^cheryl$/i.test(name));
+  const remainingMembers = normalizedMembers.filter(name => !/^cheryl$/i.test(name));
+
+  if (!cherylEntry) {
+    return remainingMembers;
+  }
+
+  return [cherylEntry, ...remainingMembers];
+}
+
+function getFamilyMembers() {
+  return sortFamilyMembers(FAMILY_MEMBERS);
+}
+
 // Default recipes (seed data)
 function getDefaultRecipes() {
   return [

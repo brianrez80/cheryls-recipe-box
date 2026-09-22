@@ -273,6 +273,67 @@ async function handleDeleteRecipe(recipeId) {
 // Review workflow handlers
 async function setupReviewListeners() {
   document.body.addEventListener('click', async (e) => {
+    const imageMoveUpButton = e.target.closest('[data-review-image-move-up]');
+    if (imageMoveUpButton) {
+      const recipeId = imageMoveUpButton.dataset.reviewRecipeId;
+      const index = Number(imageMoveUpButton.dataset.reviewImageIndex || 0);
+      const recipe = recipes.find(r => r.id === recipeId);
+      if (recipe) {
+        const images = Array.isArray(recipe.images) ? [...recipe.images] : [];
+        const sourceFiles = Array.isArray(recipe.sourceFiles) ? [...recipe.sourceFiles] : [];
+        if (index > 0 && images[index - 1]) {
+          [images[index - 1], images[index]] = [images[index], images[index - 1]];
+          if (sourceFiles[index - 1] || sourceFiles[index]) {
+            [sourceFiles[index - 1], sourceFiles[index]] = [sourceFiles[index], sourceFiles[index - 1]];
+          }
+          recipe.images = images;
+          recipe.sourceFiles = sourceFiles;
+          showReviewComparison(recipe);
+        }
+      }
+      return;
+    }
+
+    const imageMoveDownButton = e.target.closest('[data-review-image-move-down]');
+    if (imageMoveDownButton) {
+      const recipeId = imageMoveDownButton.dataset.reviewRecipeId;
+      const index = Number(imageMoveDownButton.dataset.reviewImageIndex || 0);
+      const recipe = recipes.find(r => r.id === recipeId);
+      if (recipe) {
+        const images = Array.isArray(recipe.images) ? [...recipe.images] : [];
+        const sourceFiles = Array.isArray(recipe.sourceFiles) ? [...recipe.sourceFiles] : [];
+        if (index < images.length - 1) {
+          [images[index], images[index + 1]] = [images[index + 1], images[index]];
+          if (sourceFiles[index] || sourceFiles[index + 1]) {
+            [sourceFiles[index], sourceFiles[index + 1]] = [sourceFiles[index + 1], sourceFiles[index]];
+          }
+          recipe.images = images;
+          recipe.sourceFiles = sourceFiles;
+          showReviewComparison(recipe);
+        }
+      }
+      return;
+    }
+
+    const imageRemoveButton = e.target.closest('[data-review-image-remove]');
+    if (imageRemoveButton) {
+      const recipeId = imageRemoveButton.dataset.reviewRecipeId;
+      const index = Number(imageRemoveButton.dataset.reviewImageIndex || 0);
+      const recipe = recipes.find(r => r.id === recipeId);
+      if (recipe) {
+        const images = Array.isArray(recipe.images) ? [...recipe.images] : [];
+        const sourceFiles = Array.isArray(recipe.sourceFiles) ? [...recipe.sourceFiles] : [];
+        images.splice(index, 1);
+        if (sourceFiles[index]) {
+          sourceFiles.splice(index, 1);
+        }
+        recipe.images = images;
+        recipe.sourceFiles = sourceFiles;
+        showReviewComparison(recipe);
+      }
+      return;
+    }
+
     // Review & Edit button
     if (e.target.dataset.reviewEdit) {
       const recipeId = e.target.dataset.reviewEdit;
@@ -333,28 +394,55 @@ async function loadAndShowReviewQueue() {
 async function handleApproveRecipe(recipeId, formData) {
   try {
     const editorName = 'Cheryl'; // In production, get from authenticated user
-    
+    const recipe = recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
     const updates = {
-      name: formData.get('name'),
-      time: formData.get('time'),
-      mainCategory: formData.get('mainCategory'),
-      ethnicity: formData.get('ethnicity'),
-      notes: formData.get('notes')
+      name: formData.get('name')?.toString().trim() || '',
+      time: formData.get('time')?.toString().trim() || '',
+      mainCategory: formData.get('mainCategory')?.toString().trim() || '',
+      ethnicity: formData.get('ethnicity')?.toString().trim() || '',
+      notes: formData.get('notes')?.toString().trim() || ''
     };
 
-    await approveDraftRecipe(recipeId, editorName, updates);
-    
-    // Update local recipe list
+    if (!updates.name) {
+      alert('Please enter the recipe name.');
+      return;
+    }
+
+    let finalImages = recipe.images || [];
+    if (Array.isArray(recipe.sourceFiles) && recipe.sourceFiles.length > 0) {
+      const uploadedImages = await uploadSelectedImages(recipeId, recipe.sourceFiles);
+      if (!uploadedImages) {
+        throw new Error('Image upload failed. Please try again before saving.');
+      }
+      finalImages = uploadedImages;
+    }
+
+    const approvedRecipe = {
+      ...recipe,
+      ...updates,
+      images: finalImages,
+      status: 'approved',
+      reviewedBy: editorName,
+      reviewedAt: new Date().toISOString(),
+      persisted: true
+    };
+
+    if (recipe.persisted === false) {
+      await saveNewRecipe(approvedRecipe);
+    } else {
+      await approveDraftRecipe(recipeId, editorName, approvedRecipe);
+    }
+
     recipes = recipes.map(r =>
-      r.id === recipeId
-        ? { ...r, ...updates, status: 'approved', reviewedBy: editorName }
-        : r
+      r.id === recipeId ? approvedRecipe : r
     );
 
     alert('Recipe approved and published!');
     hideAllPanels();
     showPanel(ui.homeView);
-    
+
     await loadAndShowReviewQueue();
 
   } catch (error) {

@@ -121,14 +121,33 @@ function initializeNexus() {
   });
 }
 
-function createNexusSource(file, options = {}) {
-  const extension = (file.name.split('.').pop() || 'FILE').toUpperCase();
+function buildNexusBatchEntry(files, options = {}) {
+  const batchFiles = Array.from(files || []).filter(Boolean);
+  const id = options.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return {
+    id,
+    files: batchFiles,
+    file: batchFiles[0] || null,
+    key: options.key || batchFiles.map(file => getNexusDuplicateKey(file)).join('||'),
+    status: options.status || 'pending',
+    error: '',
+    recipe: null,
+    images: [],
+    sourceFiles: batchFiles
+  };
+}
+
+function createNexusSource(files, options = {}) {
+  const imageFiles = Array.isArray(files) ? files : [files];
+  const file = imageFiles[0];
+  const extension = (file?.name.split('.').pop() || 'FILE').toUpperCase();
   const iconType = /PNG|JPG|JPEG|WEBP|GIF/.test(extension)
     ? 'img'
     : /DOC|DOCX/.test(extension) ? 'doc' : /TXT/.test(extension) ? 'txt' : extension.toLowerCase();
-  const size = file.size > 1048576
-    ? `${(file.size / 1048576).toFixed(1)} MB`
-    : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+  const totalSize = imageFiles.reduce((sum, currentFile) => sum + (currentFile?.size || 0), 0);
+  const size = totalSize > 1048576
+    ? `${(totalSize / 1048576).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(totalSize / 1024))} KB`;
   const item = document.createElement('article');
   item.className = 'source-item is-learning';
   item.dataset.nexusItemId = options.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -139,9 +158,9 @@ function createNexusSource(file, options = {}) {
   icon.textContent = extension.slice(0, 4);
   const details = document.createElement('div');
   const name = document.createElement('strong');
-  name.textContent = file.name;
+  name.textContent = imageFiles.length > 1 ? `${file?.name || 'Recipe'} +${imageFiles.length - 1}` : file?.name || 'Recipe';
   const meta = document.createElement('small');
-  meta.textContent = `${extension} · ${size}`;
+  meta.textContent = `${imageFiles.length > 1 ? `${imageFiles.length} images` : extension} · ${size}`;
   details.append(name, meta);
   const actions = document.createElement('div');
   actions.className = 'source-item-actions';
@@ -216,20 +235,12 @@ function addNexusSources(fileList, panel) {
     return;
   }
 
-  acceptedFiles.forEach(file => {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const item = createNexusSource(file, { id, status: 'pending' });
-    item.dataset.nexusFileKey = getNexusDuplicateKey(file);
-    createNexusSourceEntry(item, panel);
-    nexusImportState.queue.push({
-      id,
-      file,
-      key: item.dataset.nexusFileKey,
-      status: 'pending',
-      error: ''
-    });
-    syncNexusState();
-  });
+  const batchEntry = buildNexusBatchEntry(acceptedFiles, { id: `${Date.now()}-${Math.random().toString(16).slice(2)}` });
+  const item = createNexusSource(batchEntry.files, { id: batchEntry.id, status: 'pending' });
+  item.dataset.nexusFileKey = batchEntry.key;
+  createNexusSourceEntry(item, panel);
+  nexusImportState.queue.push(batchEntry);
+  syncNexusState();
 
   renderNexusQueue(panel);
   processNexusQueue(panel);
@@ -318,7 +329,7 @@ function updateNexusProgress(entry, panel, stepName, stageIndex, statusText) {
   const progressSteps = panel.querySelector('[data-progress-steps]');
   const progressFile = panel.querySelector('[data-progress-file]');
   if (!progressName || !progressStatus || !progressSteps) return;
-  progressName.textContent = entry ? entry.file.name : 'No files queued';
+  progressName.textContent = entry ? (entry.displayName || entry.file?.name || 'Recipe batch') : 'No files queued';
   progressStatus.textContent = statusText || 'Waiting for recipe images...';
   const items = progressSteps.querySelectorAll('li');
   items.forEach((item, index) => {
@@ -354,8 +365,11 @@ function processNexusQueue(panel) {
   window.setTimeout(async () => {
     try {
       updateNexusProgress(nextEntry, panel, 'processing', 1, 'Reading recipe');
-      const parsedRecipe = await extractNexusRecipe(nextEntry.file);
+      const parsedRecipe = await extractNexusRecipe(nextEntry.files);
       nextEntry.recipe = parsedRecipe;
+      nextEntry.displayName = nextEntry.files.length > 1
+        ? `${nextEntry.files[0].name} +${nextEntry.files.length - 1}`
+        : nextEntry.files[0]?.name || 'Recipe batch';
       nextEntry.status = 'ready';
       nextEntry.error = '';
       syncNexusState();
@@ -384,15 +398,23 @@ function processNexusQueue(panel) {
   }, 400);
 }
 
-async function extractNexusRecipe(file) {
-  const result = await performOCR([file], ({ status, progress, imageIndex, imageCount }) => {
+async function extractNexusRecipe(files) {
+  const batchFiles = Array.isArray(files) ? files : [files];
+  const result = await performOCR(batchFiles, ({ status, progress, imageIndex, imageCount }) => {
     const percent = Math.round(((imageIndex - 1 + progress) / imageCount) * 100);
     const stage = status === 'Recognizing text' || status === 'Extracting text' ? 1 : 0;
     if (stage === 0) {
       return;
     }
   });
-  const recipe = await createDraftFromOCR([file.name], result, 'Cheryl');
+  const previewImages = batchFiles.map(file => {
+    if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      return URL.createObjectURL(file);
+    }
+    return file.name;
+  });
+  const recipe = await createDraftFromOCR(previewImages, result, 'Cheryl');
+  recipe.sourceFiles = batchFiles;
   return recipe;
 }
 
@@ -430,7 +452,8 @@ function showRecipeReviewFromImport(recipe, panel) {
   const reviewRecipe = {
     ...recipe,
     contributorName: 'Cheryl',
-    status: 'draft'
+    status: 'draft',
+    persisted: false
   };
   recipes.push(reviewRecipe);
   hideAllPanels();
