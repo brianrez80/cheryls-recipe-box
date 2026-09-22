@@ -254,7 +254,7 @@ function setupHomeViewListeners() {
       return;
     }
 
-    const action = e.target.dataset.action;
+    const action = e.target.closest?.('[data-action]')?.dataset.action;
     if (!action) return;
 
     hideAllPanels();
@@ -292,7 +292,7 @@ function setupHomeViewListeners() {
   });
 
   ui.memberRecipeBoxPanel?.addEventListener('click', async (e) => {
-    const action = e.target.dataset.memberAction;
+    const action = e.target.closest?.('[data-member-action]')?.dataset.memberAction;
     if (!action) return;
     hideAllPanels();
 

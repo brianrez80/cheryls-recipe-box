@@ -64,7 +64,12 @@ function ensureImportCenterButtonLabels() {
     'button[data-action="nexus"], button[data-member-action="nexus"]'
   ) || [];
   importButtons.forEach(button => {
-    button.textContent = '📥 Import Center';
+    const title = button.querySelector?.('.nexus-home-title');
+    if (title) {
+      title.textContent = 'Import Center';
+    } else {
+      button.textContent = '📥 Import Center';
+    }
   });
 }
 
@@ -80,7 +85,9 @@ function renderMemberSpaces(members) {
   const container = document.getElementById('memberSpaces');
   if (!container) return;
 
-  const activeMembers = (members || []).filter(member => member.active !== false);
+  const visibleNames = new Set(['cheryl', 'brian']);
+  const activeMembers = (members || []).filter(member => member.active !== false
+    && visibleNames.has(normalizeFamilyMemberName(member.displayName).toLocaleLowerCase()));
   container.innerHTML = activeMembers.map(member => `
     <button class="home-button member-space-button" data-member-id="${escapeHtml(member.id)}">
       ${escapeHtml(member.displayName)}'s Recipes

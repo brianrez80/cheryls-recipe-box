@@ -172,9 +172,10 @@ async function handleNexusRecipeLinkImport(event) {
   if (status) status.textContent = 'Creating your draft…';
   try {
     const formData = new FormData(form);
+    const selectedMemberId = document.getElementById('nexusMemberId')?.value;
     const memberId = typeof getRecipeOwnerForCurrentSpace === 'function'
-      ? getRecipeOwnerForCurrentSpace(formData.get('memberId'))
-      : formData.get('memberId') || getNexusDefaultMemberId();
+      ? getRecipeOwnerForCurrentSpace(selectedMemberId)
+      : selectedMemberId || getNexusDefaultMemberId();
     const draftRecipe = await createRecipeLinkDraft(formData.get('recipeLinkUrl'), '', memberId);
     closeNexusRecipeLinkForm(form);
     hideAllPanels();
