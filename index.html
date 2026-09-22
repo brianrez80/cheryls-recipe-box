@@ -62,7 +62,11 @@
         <button class="home-button" data-action="main">Browse by Meat / Main Category</button>
         <button class="home-button" data-action="ethnicity">Browse by Ethnicity / Cuisine</button>
         <button class="home-button" data-action="all">All Recipes</button>
-        <button class="home-button nexus-home-button" data-action="nexus">📥 Import Center</button>
+        <button class="home-button nexus-home-button" data-action="nexus">
+          <img class="nexus-home-art" src="butterfly.svg" alt="" aria-hidden="true">
+          <span class="nexus-home-title">Import Center</span>
+          <small class="nexus-home-description">Bring recipes into your box from photos or shared links.</small>
+        </button>
       </div>
       <section class="member-spaces" aria-labelledby="memberSpacesTitle">
         <h3 id="memberSpacesTitle">Family Recipe Spaces</h3>
@@ -83,7 +87,11 @@
         <button class="home-button" data-member-action="main">Browse by Meat / Main Category</button>
         <button class="home-button" data-member-action="ethnicity">Browse by Ethnicity / Cuisine</button>
         <button class="home-button" data-member-action="all">All Recipes</button>
-        <button class="home-button nexus-home-button" data-member-action="nexus">📥 Import Center</button>
+        <button class="home-button nexus-home-button" data-member-action="nexus">
+          <img class="nexus-home-art" src="butterfly.svg" alt="" aria-hidden="true">
+          <span class="nexus-home-title">Import Center</span>
+          <small class="nexus-home-description">Bring recipes into your box from photos or shared links.</small>
+        </button>
       </div>
     </section>
 
@@ -290,17 +298,15 @@
 
           <div class="nexus-url-row" data-nexus-url-row>
             <span class="url-icon" aria-hidden="true">&#9678;</span>
-            <div><strong>Have a recipe website?</strong><small>Paste a recipe link to import it.</small></div>
-            <button type="button" data-nexus-url-open>Add recipe link</button>
+            <div><strong>Have a recipe or video link?</strong><small>Paste a recipe, YouTube, TikTok, Facebook, Instagram, or other supported video link.</small></div>
+            <button type="button" data-nexus-url-open>Add Recipe or Video Link</button>
             <form class="nexus-url-form hidden" data-nexus-url-form>
               <label for="nexusRecipeUrl">Recipe or video link</label>
               <div>
                 <input id="nexusRecipeUrl" name="recipeLinkUrl" type="url" inputmode="url" required placeholder="https://example.com/my-recipe">
-                <button type="submit">Add Recipe Link</button>
+                <button type="submit">Add Recipe or Video Link</button>
                 <button type="button" data-nexus-url-cancel>Cancel</button>
               </div>
-              <label for="nexusLinkMemberId">Who does this recipe belong to?</label>
-              <select id="nexusLinkMemberId" name="memberId" data-member-select required></select>
               <p data-nexus-url-status role="status" aria-live="polite"></p>
             </form>
           </div>
