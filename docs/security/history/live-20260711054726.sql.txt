@@ -1,0 +1,21 @@
+alter table public.recipes
+  add column if not exists status text not null default 'approved',
+  add column if not exists original_image_urls text[] not null default '{}'::text[],
+  add column if not exists ocr_text text,
+  add column if not exists contributor_name text,
+  add column if not exists reviewed_at timestamptz,
+  add column if not exists reviewed_by text;
+
+alter table public.recipes
+  drop constraint if exists recipes_status_check;
+
+alter table public.recipes
+  add constraint recipes_status_check
+  check (status in ('draft', 'approved'));
+
+update public.recipes
+set status = 'approved'
+where status is null;
+
+create index if not exists recipes_status_created_at_idx
+  on public.recipes (status, created_at desc);

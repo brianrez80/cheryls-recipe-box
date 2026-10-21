@@ -1,5 +1,7 @@
 # Cheryl's Recipe Box - OCR Review Workflow Implementation
 
+> Historical pre-remediation notes. PIN authentication and deployment instructions below are obsolete. Use [the private Recipe Box documentation](docs/security/README.md) and [the approval-only rollout](docs/security/ROLLOUT.md).
+
 ## Summary
 
 Successfully implemented an OCR recipe-review workflow for Cheryl's Recipe Box while maintaining all existing recipes and design. The application has been refactored into clean, modular JavaScript files with comprehensive OCR upload and editor review features.

@@ -1,5 +1,7 @@
 # Code Architecture & Module Dependencies
 
+Authentication now uses Supabase Auth plus a private two-identity database allowlist. The older module descriptions below document the original app; PIN constants and PIN verification no longer exist. See [current security architecture](docs/security/README.md).
+
 ## Module Dependency Graph
 
 ```

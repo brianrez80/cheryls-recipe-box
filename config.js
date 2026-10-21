@@ -6,12 +6,6 @@ const SUPABASE_CONFIG = {
   STORAGE_BUCKET: 'recipe-images'
 };
 
-// PIN for app access (should be moved to environment or backend in production)
-const APP_PIN = '4912';
-
-// Session storage key
-const UNLOCK_KEY = 'cheryl-recipe-box-unlocked';
-
 // Main categories for recipes
 const MAIN_CATEGORIES = [
   'Chicken', 'Beef', 'Pork', 'Fish', 'Seafood',

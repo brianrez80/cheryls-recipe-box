@@ -1,0 +1,357 @@
+{
+  "schema": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "recipes",
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "cook_time",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "main_category",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "ethnicity",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "notes",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "image_url",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "recipes",
+        "default": "now()",
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "table": "recipes",
+        "default": "'approved'::text",
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "original_image_urls",
+        "type": "text[]",
+        "table": "recipes",
+        "default": "'{}'::text[]",
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "ocr_text",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "contributor_name",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "reviewed_at",
+        "type": "timestamp with time zone",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "reviewed_by",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "video_url",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "source_url",
+        "type": "text",
+        "table": "recipes",
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "member_id",
+        "type": "uuid",
+        "table": "recipes",
+        "default": "'00000000-0000-4000-8000-000000000001'::uuid",
+        "identity": "",
+        "not_null": false,
+        "generated": ""
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "family_members",
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "display_name",
+        "type": "text",
+        "table": "family_members",
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "active",
+        "type": "boolean",
+        "table": "family_members",
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "family_members",
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "generated": ""
+      }
+    ],
+    "indexes": [
+      {
+        "indexdef": "CREATE UNIQUE INDEX recipes_pkey ON public.recipes USING btree (id)",
+        "indexname": "recipes_pkey",
+        "tablename": "recipes",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX recipes_status_created_at_idx ON public.recipes USING btree (status, created_at DESC)",
+        "indexname": "recipes_status_created_at_idx",
+        "tablename": "recipes",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX recipes_member_id_idx ON public.recipes USING btree (member_id)",
+        "indexname": "recipes_member_id_idx",
+        "tablename": "recipes",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX family_members_pkey ON public.family_members USING btree (id)",
+        "indexname": "family_members_pkey",
+        "tablename": "family_members",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX family_members_display_name_unique ON public.family_members USING btree (lower(display_name))",
+        "indexname": "family_members_display_name_unique",
+        "tablename": "family_members",
+        "schemaname": "public",
+        "tablespace": null
+      }
+    ],
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "true",
+        "roles": [
+          "public"
+        ],
+        "tablename": "recipes",
+        "permissive": "PERMISSIVE",
+        "policyname": "Allow recipe access",
+        "schemaname": "public",
+        "with_check": "true"
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "anon",
+          "authenticated"
+        ],
+        "tablename": "family_members",
+        "permissive": "PERMISSIVE",
+        "policyname": "Family members can be created from the recipe box",
+        "schemaname": "public",
+        "with_check": "(char_length(btrim(display_name)) > 0)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "true",
+        "roles": [
+          "anon",
+          "authenticated"
+        ],
+        "tablename": "family_members",
+        "permissive": "PERMISSIVE",
+        "policyname": "Family members are visible to recipe box visitors",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "DELETE",
+        "qual": "(bucket_id = 'recipe-images'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "Allow image deletes",
+        "schemaname": "storage",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(bucket_id = 'recipe-images'::text)",
+        "roles": [
+          "public"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "Allow image updates",
+        "schemaname": "storage",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "tablename": "objects",
+        "permissive": "PERMISSIVE",
+        "policyname": "Allow image uploads",
+        "schemaname": "storage",
+        "with_check": "(bucket_id = 'recipe-images'::text)"
+      }
+    ],
+    "triggers": null,
+    "constraints": [
+      {
+        "name": "recipes_member_id_fkey",
+        "table": "recipes",
+        "definition": "FOREIGN KEY (member_id) REFERENCES family_members(id) ON DELETE SET NULL"
+      },
+      {
+        "name": "recipes_pkey",
+        "table": "recipes",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "recipes_status_check",
+        "table": "recipes",
+        "definition": "CHECK ((status = ANY (ARRAY['draft'::text, 'approved'::text])))"
+      },
+      {
+        "name": "family_members_pkey",
+        "table": "family_members",
+        "definition": "PRIMARY KEY (id)"
+      }
+    ],
+    "table_options": [
+      {
+        "acl": [
+          "postgres=arwdDxtm/postgres",
+          "anon=arwdDxtm/postgres",
+          "authenticated=arwdDxtm/postgres",
+          "service_role=arwdDxtm/postgres"
+        ],
+        "rls": true,
+        "name": "recipes",
+        "force_rls": false,
+        "replica_identity": "d"
+      },
+      {
+        "acl": [
+          "postgres=arwdDxtm/postgres",
+          "anon=arwdDxtm/postgres",
+          "authenticated=arwdDxtm/postgres",
+          "service_role=arwdDxtm/postgres"
+        ],
+        "rls": true,
+        "name": "family_members",
+        "force_rls": false,
+        "replica_identity": "d"
+      }
+    ]
+  }
+}

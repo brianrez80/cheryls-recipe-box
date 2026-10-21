@@ -4,36 +4,34 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#6f4a8e" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' https://knpovxbqoohsddquiyjv.supabase.co wss://knpovxbqoohsddquiyjv.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; img-src 'self' blob: data: https:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <title>Cheryl's Recipe Box</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="locked">
-  <!-- PIN Authentication Screen -->
-  <div id="pinScreen" class="pin-screen">
+  <!-- Database-enforced private access; no browser PIN. -->
+  <div id="authScreen" class="pin-screen" role="region" aria-labelledby="authTitle">
     <div class="pin-card">
       <div class="pin-butterflies">
         <img src="butterfly.svg" alt="" />
         <img src="butterfly.svg" alt="" />
       </div>
-      <h2>Cheryl's Recipe Box</h2>
-      <p>Enter the PIN to open the recipe box.</p>
-      <form id="pinForm">
-        <input 
-          id="pinInput" 
-          type="tel" 
-          inputmode="numeric" 
-          pattern="[0-9]*" 
-          maxlength="4" 
-          placeholder="Enter PIN" 
-          autocomplete="off" 
-        />
-        <button class="btn save full" type="submit">Unlock</button>
-        <div id="pinError" class="pin-error"></div>
+      <h2 id="authTitle">Cheryl's Recipe Box</h2>
+      <p>Brian and Cheryl share one private recipe collection. Sign in with your own email link.</p>
+      <form id="authForm">
+        <label for="authEmail">Your enrolled email address</label>
+        <input id="authEmail" type="email" maxlength="254" autocomplete="email" required />
+        <button id="sendLinkButton" class="btn save full" type="submit">Email me a sign-in link</button>
+        <p id="authStatus" class="pin-error" role="status" aria-live="polite">Checking your session…</p>
+        <button id="retryAuthButton" class="btn secondary" type="button">Check my session again</button>
+        <button id="clearSessionButton" class="btn secondary" type="button">Sign out and use another email</button>
       </form>
     </div>
   </div>
 
+  <div id="privateApp" inert>
   <!-- Decorative Butterflies -->
   <img class="butterfly one" src="butterfly.svg" alt="" />
   <img class="butterfly two" src="butterfly.svg" alt="" />
@@ -49,15 +47,24 @@
         <small>Home cooking</small>
         <h1>Cheryl's Recipe Box</h1>
       </div>
-      <nav>Cozy recipes, zero nonsense.</nav>
+      <nav><span id="signedInAs"></span> <button id="signOutButton" class="btn secondary" type="button" hidden>Sign out</button></nav>
     </div>
   </header>
 
   <!-- Main Content -->
   <main class="wrap">
+    <section id="collectionActions" class="collection-actions" aria-label="Shared recipe tools">
+      <button class="btn save" type="button" data-new-recipe>Add recipe</button>
+      <button class="btn secondary" type="button" data-review-saved>Review saved drafts</button>
+      <form id="recipeSearchForm" role="search">
+        <label for="recipeSearch">Search our recipes</label>
+        <input id="recipeSearch" type="search" placeholder="Name, notes, or category" />
+        <button class="btn secondary" type="submit">Search</button>
+      </form>
+    </section>
     <!-- Home View -->
     <section id="homeView">
-      <h2>What would you like to do?</h2>
+      <h2>Our shared recipe collection</h2>
       <div class="home-buttons">
         <button class="home-button" data-action="main">Browse by Meat / Main Category</button>
         <button class="home-button" data-action="ethnicity">Browse by Ethnicity / Cuisine</button>
@@ -69,9 +76,9 @@
         </button>
       </div>
       <section class="member-spaces" aria-labelledby="memberSpacesTitle">
-        <h3 id="memberSpacesTitle">Family Recipe Spaces</h3>
+        <h3 id="memberSpacesTitle">Browse by recipe contributor</h3>
         <div id="memberSpaces" class="home-buttons member-spaces-buttons"></div>
-        <button class="btn secondary" type="button" data-action="add-member">Add Family Member</button>
+        <button class="btn secondary" type="button" data-action="add-member">Add Contributor Label</button>
       </section>
     </section>
 
@@ -96,15 +103,16 @@
     </section>
 
     <section id="memberFormPanel" class="panel hidden" aria-labelledby="familyMemberFormTitle">
-      <h3 id="familyMemberFormTitle">Add Family Member</h3>
+      <h3 id="familyMemberFormTitle">Add Contributor Label</h3>
+      <p>Labels organize recipes. They do not create accounts or grant access.</p>
       <form id="familyMemberForm" class="form full">
         <div class="form-section full">
           <label for="familyMemberName">Display Name</label>
           <input id="familyMemberName" type="text" maxlength="100" autocomplete="name" required>
         </div>
         <div class="form-actions full">
-          <button class="btn secondary" type="button" onclick="hideAllPanels(); showPanel(ui.homeView);">Cancel</button>
-          <button class="btn save" type="submit">Add Family Member</button>
+          <button class="btn secondary" type="button" data-return-home>Cancel</button>
+          <button class="btn save" type="submit">Add Contributor Label</button>
         </div>
         <p id="familyMemberStatus" role="status" aria-live="polite"></p>
       </form>
@@ -205,7 +213,7 @@
         </div>
 
         <div class="form-actions full">
-          <button type="button" class="btn secondary" onclick="editingId = null; ui.form.reset(); returnToRecipeSpaceHome();">
+          <button type="button" class="btn secondary" data-cancel-recipe>
             Cancel
           </button>
           <button type="submit" class="btn save">Save Recipe</button>
@@ -226,7 +234,7 @@
       <p>These recipes have been submitted by contributors and are waiting for review and approval.</p>
       <div data-review-list></div>
       <div style="margin-top: 16px;">
-        <button class="btn secondary" onclick="returnToRecipeSpaceHome();">Back to Home</button>
+        <button class="btn secondary" type="button" data-return-home>Back to Home</button>
       </div>
     </section>
 
@@ -351,9 +359,10 @@
 
   <!-- Back to Top Button -->
   <button id="backToTopBtn" title="Back to top">↑ Top</button>
+  </div>
 
   <!-- Supabase Library -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
   <!-- Client-side OCR engine -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js"></script>
 
