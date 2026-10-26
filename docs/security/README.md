@@ -1,5 +1,7 @@
 # Private Recipe Box implementation
 
+The approval-only follow-up for six-digit email OTP and faster private-photo loading is documented in [EMAIL-OTP-RELEASE.md](EMAIL-OTP-RELEASE.md). Its application/template changes are prepared on a separate feature branch; the production Auth template/settings and deployed application have not been changed by that follow-up.
+
 This implements the remediation requested after [audit PR #19](https://github.com/brianrez80/cheryls-recipe-box/pull/19). It is prepared for review, not deployed. The live anonymous-access vulnerability remains until the coordinated rollout is completed and verified.
 
 ## Access model

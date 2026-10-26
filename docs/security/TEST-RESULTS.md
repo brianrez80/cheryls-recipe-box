@@ -1,5 +1,11 @@
 # Validation results and limits
 
+## Prepared email OTP follow-up — not deployed
+
+The OTP/image-loading follow-up passes 28 Node test entries (including all original application files), 11 browser tests, 126 disposable database checks, 63 static checks, JavaScript syntax, and one real synthetic OCR smoke. Browser cases use the pinned real Supabase SDK with intercepted synthetic provider responses. Samsung Galaxy/Android emulation covers a cross-browser handoff without PKCE state, typed leading-zero codes, reuse rejection, persistence/logout and mobile shared CRUD. Other cases cover a delayed verification after logout, a late initial session check, on-demand/offscreen private photos, retry and cancellation, and continued authorization denial. No production customer data is used in fixtures.
+
+An original local test-file syntax typo was corrected before these passing results; no known test failure is waived. No live OTP email was sent, no live email template/provider setting was changed, and no deployment was created during preparation. Actual Samsung hardware/Gmail delivery and live six-digit issuance remain approval-time acceptance checks in [EMAIL-OTP-RELEASE.md](EMAIL-OTP-RELEASE.md).
+
 Repository validation uses synthetic identities, recipes and images; no live recipe/file data was used in these regression fixtures. Separate, explicitly approved operator work prepared and verified the two real Auth identities and encrypted local backups outside Git. Those actions do not enroll recipe membership or apply this PR. Read-only release review and the October 24 rerun are recorded in [release readiness](RELEASE-READINESS.md).
 
 ## Commands

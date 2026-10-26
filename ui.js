@@ -178,6 +178,7 @@ function renderRecipes(recipes, title = 'Recipes') {
     const recipe = recipes.find(item => String(item.id) === card.dataset.recipeId);
     if (recipe) appendRecipeLinks(card, recipe);
   });
+  if (typeof hydratePrivateImages === 'function') hydratePrivateImages(ui.recipeList);
 }
 
 function appendRecipeLinks(card, recipe) {
@@ -263,6 +264,7 @@ function renderReviewQueue(recipes) {
   }).join('');
 
   showPanel(ui.reviewQueuePanel);
+  if (typeof hydratePrivateImages === 'function') hydratePrivateImages(list);
 }
 
 // Show review comparison/edit view
@@ -357,6 +359,7 @@ function showReviewComparison(recipe) {
   `;
 
   showPanel(ui.reviewComparisonPanel);
+  if (typeof hydratePrivateImages === 'function') hydratePrivateImages(comparison);
 }
 
 // Scroll to top button handler

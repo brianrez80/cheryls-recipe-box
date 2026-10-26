@@ -62,8 +62,6 @@ async function loadPrivateRecipeCollection() {
   const [members, items] = await Promise.all([fetchFamilyMembers(), fetchAllRecipes()]);
   if (!isCurrent()) return;
   if (!Array.isArray(members) || !Array.isArray(items)) throw new Error('Private collection unavailable');
-  await preparePrivateImages(items.flatMap(getRecipeImages));
-  if (!isCurrent()) return;
   familyMembers = getOrderedFamilyMembers(members);
   recipes = hydrateRecipeMembers(items);
   activeMemberId = null;
@@ -272,8 +270,6 @@ async function loadRecipes() {
       recipes = [];
       if (typeof recipeAuth !== 'undefined') recipeAuth?.lock('Recipes could not be loaded. Check your session and try again.');
     } else {
-      if (!isCurrent()) return;
-      if (typeof preparePrivateImages === 'function') await preparePrivateImages(data.flatMap(getRecipeImages));
       if (!isCurrent()) return;
       recipes = hydrateRecipeMembers(data);
       console.log(`Loaded ${recipes.length} recipes`);
