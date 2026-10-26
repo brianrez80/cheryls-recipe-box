@@ -4,7 +4,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 const root = path.resolve(import.meta.dirname,'../..');
 const migrationDir = path.join(root,'supabase/migrations');
-const securityFile = '20261021015453_secure_shared_recipe_box.sql';
+const securityFile = '20261026013444_secure_shared_recipe_box.sql';
 const security = fs.readFileSync(path.join(migrationDir,securityFile),'utf8');
 const enrollment = fs.readFileSync(path.join(root,'supabase/admin/enroll.sql'),'utf8');
 const preflight = fs.readFileSync(path.join(root,'supabase/admin/preflight.sql'),'utf8');

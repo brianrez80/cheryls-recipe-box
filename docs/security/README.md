@@ -22,7 +22,7 @@ The SDK is pinned and integrity-checked. CSP blocks inline scripts and active-co
 
 - 20260711054726_add_recipe_review_workflow.sql is a **fresh-only reconstruction** of the inspected schema. Its version already exists in live history; it must not run against an existing recipe database. It explicitly aborts if recipe tables exist.
 - 20260814014436_add_legacy_recipe_links.sql uses the version and SQL actually recorded in the live project.
-- 20261021015453_secure_shared_recipe_box.sql is the only new live migration. It changes authorization/storage configuration and adds membership machinery; it does not insert, update, delete, truncate or reassign any recipe or existing contributor record. Existing objects and file bytes stay in place.
+- 20261026013444_secure_shared_recipe_box.sql contains the approved security migration, originally reviewed as 20261021015453_secure_shared_recipe_box.sql. The filename now matches the successful Supabase runner's recorded execution version; SQL bytes are unchanged. It changes authorization/storage configuration and adds membership machinery; it does not insert, update, delete, truncate or reassign any recipe or existing contributor record. Existing objects and file bytes stay in place.
 - Historical source files that updated recipe attribution or seeded/upserted labels are archived as .sql.txt outside the migration directory. They are not replayed or falsely marked applied.
 - All API grants are explicit; fresh tests run with automatic table/sequence grants disabled. UUID keys require no sequence grant.
 
