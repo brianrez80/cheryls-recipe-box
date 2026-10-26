@@ -297,16 +297,8 @@ function addNexusSources(fileList, panel) {
 }
 
 function syncNexusState() {
-  window.sessionStorage.setItem('nexusImportState', JSON.stringify({
-    queue: nexusImportState.queue.map(item => ({
-      id: item.id,
-      key: item.key,
-      status: item.status,
-      error: item.error,
-      recipe: item.recipe || null
-    })),
-    sessionId: nexusImportState.sessionId || `${Date.now()}`
-  }));
+  // Imports contain private recipe text; retain them only in this page's memory.
+  window.sessionStorage.removeItem('nexusImportState');
 }
 
 function renderNexusQueue(panel) {

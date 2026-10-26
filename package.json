@@ -1,0 +1,16 @@
+{
+  "name": "cheryls-private-recipe-box",
+  "private": true,
+  "scripts": {
+    "test": "node --test *.test.js",
+    "test:database": "node tests/security/database.mjs",
+    "test:browser": "playwright test browser.spec.cjs",
+    "test:ocr": "playwright test ocr-network.spec.cjs",
+    "check": "node scripts/check-syntax.cjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@playwright/test": "1.64.1",
+    "@supabase/supabase-js": "2.117.2"
+  }
+}

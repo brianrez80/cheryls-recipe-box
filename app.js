@@ -4,6 +4,13 @@ let recipes = [];
 let editingId = null;
 let familyMembers = [];
 let activeMemberId = null;
+let privateStateRevision = 0;
+
+function captureRecipeOperation() {
+  const started = privateStateRevision;
+  return () => started === privateStateRevision &&
+    (typeof isUserAuthenticated !== 'function' || isUserAuthenticated());
+}
 
 // Initialize the application
 async function initializeApp() {
@@ -14,15 +21,6 @@ async function initializeApp() {
 
   // Initialize Supabase
   initializeSupabase();
-
-  // Initialize Authentication
-  initializeAuth();
-
-  // Load members before recipes so legacy recipes can safely fall back to Cheryl.
-  await loadFamilyMembers();
-
-  // Load recipes
-  await loadRecipes();
 
   // Setup event listeners
   setupEventListeners();
@@ -39,8 +37,59 @@ async function initializeApp() {
   populateStaticMemberSelects();
   renderOCRUploadForm();
 
-  window.dispatchEvent(new Event('recipe-box-ready'));
+  document.querySelectorAll('[data-return-home]').forEach(button => button.addEventListener('click', returnToRecipeSpaceHome));
+  document.querySelector('[data-cancel-recipe]')?.addEventListener('click', () => {
+    editingId = null; ui.form.reset(); returnToRecipeSpaceHome();
+  });
+  document.querySelector('[data-new-recipe]')?.addEventListener('click', () => { hideAllPanels(); startNewRecipe(); });
+  document.querySelector('[data-review-saved]')?.addEventListener('click', () => {
+    activeMemberId = null; hideAllPanels(); void loadAndShowReviewQueue();
+  });
+  document.getElementById('recipeSearchForm')?.addEventListener('submit', event => {
+    event.preventDefault();
+    const query = document.getElementById('recipeSearch').value.trim().toLocaleLowerCase();
+    renderRecipes(getAllPublishedRecipes().filter(recipe =>
+      [recipe.name,recipe.notes,recipe.mainCategory,recipe.ethnicity].some(value => String(value || '').toLocaleLowerCase().includes(query))
+    ), query ? 'Search Results' : 'All Recipes');
+  });
+  await initializeAuth();
   console.log('App initialized successfully');
+}
+
+// Only called after verified identity AND successful database admission.
+async function loadPrivateRecipeCollection() {
+  const isCurrent = captureRecipeOperation();
+  const [members, items] = await Promise.all([fetchFamilyMembers(), fetchAllRecipes()]);
+  if (!isCurrent()) return;
+  if (!Array.isArray(members) || !Array.isArray(items)) throw new Error('Private collection unavailable');
+  await preparePrivateImages(items.flatMap(getRecipeImages));
+  if (!isCurrent()) return;
+  familyMembers = getOrderedFamilyMembers(members);
+  recipes = hydrateRecipeMembers(items);
+  activeMemberId = null;
+  renderMemberSpaces(familyMembers);
+  populateStaticMemberSelects();
+  returnToRecipeSpaceHome();
+}
+
+function clearPrivateRecipeState() {
+  privateStateRevision += 1;
+  recipes = []; familyMembers = []; editingId = null; activeMemberId = null;
+  if (typeof clearPrivateImages === 'function') clearPrivateImages();
+  if (typeof nexusImportState !== 'undefined') {
+    nexusImportState.queue = []; nexusImportState.currentItem = null;
+    nexusImportState.processing = false; nexusImportState.sessionId = null;
+  }
+  if (typeof ocrState !== 'undefined') {
+    ocrState.contributorName = ''; ocrState.uploadedFiles = []; ocrState.processingRecipes = [];
+  }
+  try { window.sessionStorage.removeItem('nexusImportState'); window.sessionStorage.removeItem('cheryl-recipe-box-unlocked'); } catch {}
+  document.querySelectorAll('main form').forEach(form => form.reset());
+  for (const selector of ['#recipeList','#memberSpaces','[data-review-list]','[data-comparison-view]','[data-review-comparison]','.review-comparison']) {
+    document.querySelectorAll(selector).forEach(node => { node.replaceChildren(); });
+  }
+  if (ui.nexusPanel && typeof renderNexusQueue === 'function') renderNexusQueue(ui.nexusPanel);
+  hideAllPanels();
 }
 
 async function loadFamilyMembers() {
@@ -119,7 +168,7 @@ function hydrateRecipeMembers(items) {
 }
 
 function getAllPublishedRecipes() {
-  return recipes.filter(recipe => recipe.status === 'approved' && recipe.memberActive !== false);
+  return recipes.filter(recipe => recipe.status === 'approved');
 }
 
 function getScopedPublishedRecipes() {
@@ -214,20 +263,24 @@ function isDuplicateFamilyMemberName(displayName) {
 
 // Load recipes from database
 async function loadRecipes() {
+  const isCurrent = captureRecipeOperation();
   try {
     const data = await fetchAllRecipes();
+    if (!isCurrent()) return;
     
     if (data === null) {
-      // Fall back to default recipes if fetch fails
-      recipes = hydrateRecipeMembers(getDefaultRecipes());
-      console.warn('Could not load recipes from Supabase, using defaults');
+      recipes = [];
+      if (typeof recipeAuth !== 'undefined') recipeAuth?.lock('Recipes could not be loaded. Check your session and try again.');
     } else {
+      if (!isCurrent()) return;
+      if (typeof preparePrivateImages === 'function') await preparePrivateImages(data.flatMap(getRecipeImages));
+      if (!isCurrent()) return;
       recipes = hydrateRecipeMembers(data);
       console.log(`Loaded ${recipes.length} recipes`);
     }
   } catch (error) {
     console.error('Error loading recipes:', error);
-    recipes = hydrateRecipeMembers(getDefaultRecipes());
+    recipes = [];
   }
 }
 
@@ -342,6 +395,7 @@ function setupFormListeners() {
 }
 
 async function handleAddFamilyMember() {
+  const isCurrent = captureRecipeOperation();
   const input = document.getElementById('familyMemberName');
   const status = document.getElementById('familyMemberStatus');
   const name = normalizeFamilyMemberName(input?.value);
@@ -357,9 +411,10 @@ async function handleAddFamilyMember() {
 
   try {
     const member = await createFamilyMember(name);
+    if (!isCurrent()) return;
     addFamilyMemberToState(member);
     if (input) input.value = '';
-    if (status) status.textContent = `${member.displayName}'s Recipe Box is ready.`;
+    if (status) status.textContent = `Contributor label ${member.displayName} was added. Account access is unchanged.`;
   } catch (error) {
     const message = /duplicate|unique/i.test(error.message)
       ? 'That family member already exists.'
@@ -370,6 +425,7 @@ async function handleAddFamilyMember() {
 
 // Handle recipe form submission
 async function handleFormSubmit() {
+  const isCurrent = captureRecipeOperation();
   const recipeName = document.getElementById('name')?.value?.trim();
   const recipeTime = document.getElementById('time')?.value?.trim();
   const mainCategory = document.getElementById('mainCategory')?.value;
@@ -400,6 +456,7 @@ async function handleFormSubmit() {
     // Upload new images if provided
     if (imageFiles.length > 0) {
       const uploaded = await uploadSelectedImages(recipeId, imageFiles);
+      if (!isCurrent()) return;
       if (!uploaded) {
         alert('Image upload failed. Please try again before saving.');
         return;
@@ -421,6 +478,7 @@ async function handleFormSubmit() {
       ethnicity,
       notes,
       images,
+      imageUrl: JSON.stringify(images),
       videoUrl: videoLink.url,
       sourceUrl: sourceLink.url,
       memberId,
@@ -430,9 +488,11 @@ async function handleFormSubmit() {
     // Save to database
     if (editingId) {
       await updateRecipe(recipeId, recipe);
+      if (!isCurrent()) return;
       recipes = recipes.map(r => r.id === recipeId ? hydrateRecipeMembers([recipe])[0] : r);
     } else {
       await saveNewRecipe(recipe);
+      if (!isCurrent()) return;
       recipes.push(hydrateRecipeMembers([recipe])[0]);
     }
 
@@ -520,21 +580,22 @@ function setupRecipeListeners() {
 
 // Delete recipe
 async function handleDeleteRecipe(recipeId) {
+  const isCurrent = captureRecipeOperation();
   if (!confirm('Are you sure you want to delete this recipe?')) return;
 
   try {
-    // Delete all associated images
     const recipe = recipes.find(r => r.id === recipeId);
-    if (recipe) {
-      const images = getRecipeImages(recipe);
-      for (const imageUrl of images) {
-        await deleteImage(imageUrl);
-      }
-    }
-
-    // Delete from database
+    const images = recipe ? getRecipeImages(recipe) : [];
+    // Confirm the recipe delete before cleaning up its attachments. A failed
+    // record delete must not leave an existing recipe with missing images.
     await deleteRecipe(recipeId);
+    if (!isCurrent()) return;
     recipes = recipes.filter(r => r.id !== recipeId);
+    for (const imageUrl of images) {
+      if (!isCurrent()) return;
+      await deleteImage(imageUrl);
+    }
+    if (!isCurrent()) return;
 
     // Refresh view
     renderRecipes(
@@ -611,6 +672,7 @@ async function setupReviewListeners() {
 }
 
 async function submitReviewApproval(form) {
+  const isCurrent = captureRecipeOperation();
   const recipeId = form.dataset.recipeId;
   const recipe = recipes.find(r => r.id === recipeId);
   if (!recipe) {
@@ -631,6 +693,7 @@ async function submitReviewApproval(form) {
 
   try {
     await handleApproveRecipe(recipeId, new FormData(form));
+    if (!isCurrent()) return;
     hideAllPanels();
     renderRecipes(getScopedPublishedRecipes(), getActiveRecipeSpaceMember() ? `${getActiveRecipeSpaceMember().displayName}'s Recipes` : 'All Recipes');
   } catch (error) {
@@ -672,7 +735,9 @@ async function loadAndShowReviewQueue() {
 
 // Approve and publish recipe
 async function handleApproveRecipe(recipeId, formData) {
-  const editorName = 'Cheryl'; // In production, get from authenticated user
+  const isCurrent = captureRecipeOperation();
+  const editorName = typeof recipeAuth !== 'undefined' ? recipeAuth?.currentUserId() : 'Cheryl';
+  if (!editorName) throw new Error('Sign in again before publishing.');
   const existingRecipe = recipes.find(recipe => recipe.id === recipeId);
   if (!existingRecipe) throw new Error('This draft is no longer available');
 
@@ -701,6 +766,7 @@ async function handleApproveRecipe(recipeId, formData) {
   }
 
   const approvalUpdate = await approveDraftRecipe(recipeId, editorName, updates);
+  if (!isCurrent()) throw new Error('Session changed before publishing completed. Sign in again.');
   const approvedRecipe = hydrateRecipeMembers([{ ...existingRecipe, ...updates, ...approvalUpdate }])[0];
 
   // Merge rather than replace so imported images, OCR metadata, and contributor

@@ -81,7 +81,7 @@ try {
   
   // Check for required elements
   const requiredElements = [
-    { pattern: 'id="pinScreen"', name: 'PIN Screen' },
+    { pattern: 'id="authScreen"', name: 'Secure sign-in screen' },
     { pattern: 'id="homeView"', name: 'Home View' },
     { pattern: 'id="formPanel"', name: 'Recipe Form' },
     { pattern: 'id="recipeResults"', name: 'Recipe Results' },
@@ -146,7 +146,6 @@ try {
   
   const configChecks = [
     { pattern: 'SUPABASE_CONFIG', name: 'Supabase config object' },
-    { pattern: 'APP_PIN', name: 'APP_PIN constant' },
     { pattern: 'MAIN_CATEGORIES', name: 'Main categories' },
     { pattern: 'ETHNICITIES', name: 'Ethnicity options' },
     { pattern: 'generateId', name: 'ID generation function' }

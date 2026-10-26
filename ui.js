@@ -77,7 +77,7 @@ function renderMemberRecipeBox(member) {
   if (!ui.memberRecipeBoxPanel || !member) return;
   const title = `${member.displayName}'s Recipe Box`;
   ui.memberRecipeBoxPanel.querySelector('[data-member-box-title]').textContent = title;
-  ui.memberRecipeBoxPanel.querySelector('[data-member-box-description]').textContent = `Recipes saved for ${member.displayName}.`;
+  ui.memberRecipeBoxPanel.querySelector('[data-member-box-description]').textContent = `Recipes labeled ${member.displayName}. Brian and Cheryl both have access.`;
   ensureImportCenterButtonLabels();
 }
 

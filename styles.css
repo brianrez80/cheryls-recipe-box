@@ -145,6 +145,16 @@ body {
 body.locked {
   overflow: hidden;
 }
+[hidden] { display: none !important; }
+body.locked #privateApp { display: none; }
+#authForm { display: grid; gap: 12px; }
+#authForm label { text-align: left; font-weight: bold; }
+#authForm #authEmail { width: 100%; box-sizing: border-box; font-size: 16px; letter-spacing: normal; text-align: left; }
+#authStatus { min-height: 3em; }
+#signedInAs { overflow-wrap: anywhere; }
+.collection-actions { display: flex; flex-wrap: wrap; gap: 18px; align-items: end; margin: 20px 0; }
+#recipeSearchForm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; flex: 1; }
+#recipeSearch { min-width: 140px; flex: 1; font-size: 16px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
 
 .wrap {
   max-width: 1100px;
