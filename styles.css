@@ -148,6 +148,12 @@ body.locked {
 [hidden] { display: none !important; }
 body.locked #privateApp { display: none; }
 #authForm { display: grid; gap: 12px; }
+#authCodeForm { display: grid; gap: 12px; }
+#authCodeForm label { text-align: left; font-weight: bold; }
+#authCode { width: 100%; box-sizing: border-box; font-size: 24px; letter-spacing: .18em; padding: 12px; text-align: center; }
+.private-image-item { min-width: 0; }
+.private-image-item img:not([src]) { min-height: 100px; background: #f4edf8; }
+.private-image-retry { margin-top: 8px; font-size: 14px; }
 #authForm label { text-align: left; font-weight: bold; }
 #authForm #authEmail { width: 100%; box-sizing: border-box; font-size: 16px; letter-spacing: normal; text-align: left; }
 #authStatus { min-height: 3em; }
@@ -649,8 +655,10 @@ small {
 .pin-screen {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
   padding: 24px;
   background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.75), transparent 30%),
     linear-gradient(135deg, #f4e9ff, #ead6ff);
@@ -658,6 +666,8 @@ small {
 }
 
 .pin-card {
+  margin-block: auto;
+  flex-shrink: 0;
   width: min(430px, 100%);
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--line);

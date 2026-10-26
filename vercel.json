@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "codex/secure-private-recipe-box": false
+      "codex/secure-private-recipe-box": false,
+      "codex/recipe-box-email-otp": false
     }
   }
 }

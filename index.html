@@ -19,15 +19,24 @@
         <img src="butterfly.svg" alt="" />
       </div>
       <h2 id="authTitle">Cheryl's Recipe Box</h2>
-      <p>Brian and Cheryl share one private recipe collection. Sign in with your own email link.</p>
-      <form id="authForm">
+      <p>Brian and Cheryl share one private recipe collection. Sign in with a code sent to your email.</p>
+      <form id="authForm" aria-describedby="authStatus">
         <label for="authEmail">Your enrolled email address</label>
         <input id="authEmail" type="email" maxlength="254" autocomplete="email" required />
-        <button id="sendLinkButton" class="btn save full" type="submit">Email me a sign-in link</button>
-        <p id="authStatus" class="pin-error" role="status" aria-live="polite">Checking your session…</p>
-        <button id="retryAuthButton" class="btn secondary" type="button">Check my session again</button>
-        <button id="clearSessionButton" class="btn secondary" type="button">Sign out and use another email</button>
+        <button id="sendCodeButton" class="btn save full" type="submit">Email me a code</button>
+        <button id="haveCodeButton" class="btn secondary" type="button">I already have a code</button>
       </form>
+      <form id="authCodeForm" hidden aria-describedby="codeEmailSummary authStatus">
+        <p id="codeEmailSummary"></p>
+        <label for="authCode">Six-digit sign-in code</label>
+        <input id="authCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" autocapitalize="off" spellcheck="false" required />
+        <button id="verifyCodeButton" class="btn save full" type="submit">Verify code and sign in</button>
+        <button id="resendCodeButton" class="btn secondary" type="button">Send another code</button>
+        <button id="changeEmailButton" class="btn secondary" type="button">Use another email</button>
+      </form>
+      <p id="authStatus" class="pin-error" role="status" aria-live="polite">Checking your session…</p>
+      <button id="retryAuthButton" class="btn secondary" type="button">Check my session again</button>
+      <button id="clearSessionButton" class="btn secondary" type="button">Sign out and use another email</button>
     </div>
   </div>
 
