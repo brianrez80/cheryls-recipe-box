@@ -1,24 +1,19 @@
 # Approval-only rollout, backup and recovery
 
-Nothing in this document authorizes a live change. The implementation has not changed live Auth, grants, RLS, recipes, files, migration history or deployments.
+Nothing in this document authorizes a live change. Separately approved email/Auth preparation is complete: both intended users verified their own email and passed real magic-link sign-in, refresh and sign-out on the isolated Auth preview. The security migration, membership enrollment, private Storage and replacement production application remain unapplied. See [current release gates](RELEASE-READINESS.md).
 
 ## Before scheduling release
 
 - Obtain Brian's and Cheryl's exact emails privately and confirm each mailbox is controlled by the intended person. Do not infer identity from contributor labels, browser data or display names.
-- Confirm project ref knpovxbqoohsddquiyjv and the intended deployment. The repository advertises a GitHub Pages URL and the prior audit also found a Vercel project; Brian must identify the canonical host. Keep PKCE requests and callback on the same browser/origin.
+- Confirm project ref knpovxbqoohsddquiyjv and the approved canonical host https://cheryls-recipe-box.vercel.app/. Keep PKCE requests and callback on the same browser/origin.
 - Approve exact HTTPS Site URL and redirect entries, SMTP/email delivery, email confirmation requirements and disabling public signups. The client uses shouldCreateUser:false; database enrollment remains a separate allowlist even if an unwanted Auth account exists.
 - Pin the reviewed release commit and confirm no external job depends on anonymous recipe/image access. Retire the heartbeat as part of this release.
 - vercel.json disables automatic Vercel deployment for the review branch codex/secure-private-recipe-box. It changes no live settings; other branches retain their existing deployment behavior. An explicitly approved preview or production publication is a separate release action. Do not remove the review-branch guard before preview approval.
 - Run the SQL/browser suites in a disposable hosted Supabase environment if available. Local tests do not replace hosted Auth, real email, Storage HTTP and CDN checks.
 
-## Backup and recovery checklist
+## Backup and recovery reference
 
-1. Brian approves a restricted, encrypted backup destination and retention. Store no customer backup or credentials in Git, browser fixtures, CI artifacts or this workspace's test inputs.
-2. Use approved operator tooling to export the complete public.recipes and public.family_members schema/data, all constraints/defaults/indexes, ACLs/policies, bucket configuration, storage metadata, and migration history. A database backup does not contain Storage file bytes.
-3. Separately back up every recipe-images object with its path and a SHA-256 byte checksum. Preserve original object names and the recipe URL/reference fields.
-4. Save the output of preservation-manifest.sql in the private backup record. It returns counts and SHA-256 aggregate fingerprints, not recipe text. Save the exact preflight/catalog and release SQL.
-5. Verify that backup files are readable and complete. Test the recovery procedure with synthetic data in an isolated database. A production-backup restore needs Brian's separate authorization and must never overwrite the live database as a test.
-6. Freeze normal user writes during the short migration/manifest-comparison window so concurrent edits cannot invalidate preservation comparisons. maintenance.html is prepared as a static, script-free holding page. A maintenance page alone does not fix the existing anonymous API exposure; minimize the gap between final backup and approved authorization change.
+The current approved strategy uses native Supabase physical recovery points, the preserved independently verified local recipe/image archive, and documented Auth/email settings. The October 25 native point postdates both accounts' creation and verification. Custom Auth backup/diagnostic work is stopped and its incomplete archive is not accepted. See the single authoritative [recovery and release checklist](RELEASE-READINESS.md). No new password or export is required by this document.
 
 ## Controlled enrollment
 
@@ -37,16 +32,7 @@ The membership table has no browser administration route or end-user write grant
 
 ## Coordinated production sequence
 
-1. Get explicit approval for the backup, Auth configuration, maintenance window, reviewed commit and each live action. Pre-stage assets without publishing the replacement. Do not merge into a branch that auto-publishes until this sequence is approved.
-2. Complete backups, identity verification, callback/SMTP setup and the final preflight. The replacement client may be staged before SQL: its admission check fails closed when the RPC/schema is absent.
-3. Review supabase migration list --project-ref knpovxbqoohsddquiyjv and supabase db push --project-ref knpovxbqoohsddquiyjv --dry-run --skip-vault. Exactly one security migration must be pending. Do not pass --include-all, --include-seed or --include-roles.
-4. During the approved window, apply only that migration using the supported migration runner so only actually executed SQL is recorded. Its transaction initially leaves zero enrolled users; an enrollment problem creates a private outage, not public access.
-5. Compare preservation-manifest.sql to the pre-change record. Recipe rows, labels and Storage object metadata must match exactly. Independently check object backup/path/byte integrity. Stop on any difference.
-6. Enroll the two approved verified UUIDs using the operator script. Confirm exactly two intended seats. No data reassignment is needed; both identities see the same existing records, including legacy/null or inactive contributor labels.
-7. Publish the reviewed application and invalidate old HTML/JS caches. Old PIN clients fail against the protected API; do not restore their anonymous permissions. The retired legacy/diagnostic pages redirect to the secure entry point.
-8. Check the private bucket's formerly public URLs from a clean browser. Old public CDN/browser copies cannot be assumed erased by a bucket flag. Where supported, an approved operator can purge the bucket cache using Supabase's server-side purge facility; never put a secret in the app. Do not delete or overwrite objects to force invalidation. If cache behavior cannot be certified, get Supabase guidance and keep the release gate open.
-9. Verify separate real magic links and persistent sessions for Brian and Cheryl, shared browsing/search, photo loading, sign-out and expiry. Verify anonymous REST/Storage denial and membership exclusion. Keep any write smoke test synthetic and separately approved; no automatic production test creates or deletes customer recipes.
-10. Confirm hosted advisor results and negative access tests, and record the final checks/approvals. Only then describe the live vulnerability as fixed.
+Use the single current checklist in [RELEASE-READINESS.md](RELEASE-READINESS.md). It includes native recovery evidence, the one pending migration, private enrollment, Storage/cache work, main-branch Vercel publication and hosted acceptance. This file retains operator enrollment and containment reference details; it is not a second release checklist.
 
 ## Rollback and emergency containment
 

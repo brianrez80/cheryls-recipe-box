@@ -1,6 +1,6 @@
 # Validation results and limits
 
-Validation uses synthetic identities, recipes and images. No live accounts were registered or authorized, and no live recipe/file data was used in tests. Read-only live inspection covered schema/history, policies, role privileges and aggregate image MIME types; it did not download customer recipes or files.
+Repository validation uses synthetic identities, recipes and images; no live recipe/file data was used in these regression fixtures. Separate, explicitly approved operator work prepared and verified the two real Auth identities and encrypted local backups outside Git. Those actions do not enroll recipe membership or apply this PR. Read-only release review and the October 24 rerun are recorded in [release readiness](RELEASE-READINESS.md).
 
 ## Commands
 
@@ -32,8 +32,8 @@ SQL tests confirm anonymous CRUD denial; outsider/forged/expired admission denia
 
 ## Unverified release gates
 
-The hosted Supabase gateway's JWT verification, live GoTrue email delivery/refresh/logout behavior, actual two-person enrollment, production callback allowlists, hosted Storage downloads/uploads and public-cache invalidation have not been exercised. Browser Auth/API replies are simulated; they are not a certification of the production provider configuration. The OCR worker is real, but its input is synthetic.
+Both real users have passed delivery, verification, fresh PKCE magic-link sign-in, persistence and sign-out on the isolated Auth-only HTTPS preview. Exact hosted production/preview redirects and closed-signup/confirmation/SMTP configuration were independently read during backup preparation. Actual recipe membership remains absent. The hosted application-to-RLS-to-Storage path, two-person enrollment, production sign-in after publication, private Storage downloads/uploads, expired/revoked gateway-session denial and public-cache invalidation remain unexercised. Browser Auth/API regression replies are simulated; they do not certify those remaining hosted data controls. The OCR worker is real, but its input is synthetic.
 
-The local database tests compare stored metadata and references; they do not prove a production backup contains every image byte. A read-only MIME inventory found JPEG and PNG files, both supported by the private image path. Backup/path/byte validation and matching real preservation manifests remain approval-time requirements.
+The local database tests compare stored metadata and references; they do not prove a production backup contains every image byte. A read-only MIME inventory found JPEG and PNG files, both supported by the private image path. The original approved encrypted backup is preserved. The failed custom Auth archive remains incomplete and has been excluded from the recovery plan at Brian’s direction. Native physical recovery-point coverage, the preserved verified recipe/image archive and matching release preservation manifests now supply the recovery gates in RELEASE-READINESS.md. Keep all backup contents and private verification records outside Git.
 
 No Docker/native disposable Supabase stack or paid hosted test project was created. Run the final hosted checks before activating production and keep the vulnerability marked unresolved until successful deployment verification.

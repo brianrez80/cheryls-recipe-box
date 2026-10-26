@@ -36,9 +36,9 @@ Other discovered integrations are client-side OCR, recipe-link imports, YouTube/
 
 ## Information and approvals still required
 
-1. Brian's exact email and Cheryl's exact email, supplied privately. Neither is assumed or stored in this repository.
-2. The canonical HTTPS application URL and approved callback URLs; preview URLs must be explicitly chosen, with no wildcard redirect.
-3. Approval for Auth settings/account enrollment, email delivery/SMTP configuration, disabling public signups, and confirming both mailboxes.
-4. Approval of backup destination, retention, verification and the short maintenance window.
+1. Both intended emails and verified UUIDs have been recorded privately through the separately approved Auth setup. Do not recreate accounts or commit those records. Both real preview sign-in/refresh/sign-out tests passed; this is not database enrollment.
+2. Canonical HTTPS URL: https://cheryls-recipe-box.vercel.app/. The exact production root and isolated Auth-preview root are approved; no wildcard redirect. Adding a future staged application callback still needs review.
+3. Custom SMTP, closed public signup and required email confirmation are configured. No further Auth configuration change is proposed by this PR.
+4. Preserve the approved independently verified recipe/image backup. The current recovery strategy uses native Supabase daily physical points and documented Auth/email settings; custom Auth backup is stopped and remains incomplete. See the native-point coverage gate and maintenance approval in RELEASE-READINESS.md.
 5. Separate approval to merge, apply the single live migration, enroll the verified UUIDs, change bucket access/purge CDN caches, and publish the app.
-6. Final hosted sign-in/storage/negative-access validation with the real users. These operations were not performed by this implementation.
+6. Final hosted collection sign-in/storage/negative-access validation with the real users after the approved rollout. The separate Auth-only preview does not certify the application-to-RLS-to-Storage path. See [current release gates and checklist](RELEASE-READINESS.md).
